@@ -13,15 +13,13 @@ let storage = multer.diskStorage({
     cb(null, uniqueName);
   },
 });
-let upload = multer({
-  storage,
-  limits: { fileSize: 1000000 * 100 },
-}).single('myfile');
+
+let upload = multer({ storage, limits: { fileSize: 1000000 * 100 } }).single(
+  'myfile'
+);
+
 router.post('/', (req, res) => {
   upload(req, res, async (err) => {
-    if (!req.file) {
-      return res.json({ error: 'all files are require' });
-    }
     if (err) {
       return res.status(500).send({ error: err.message });
     }
@@ -35,10 +33,13 @@ router.post('/', (req, res) => {
     res.json({ file: `${process.env.APP_BASE_URL}/files/${response.uuid}` });
   });
 });
+
 router.post('/send', async (req, res) => {
-  const { uuid, emailTo, emailFrom } = req.body;
+  const { uuid, emailTo, emailFrom, expiresIn } = req.body;
   if (!uuid || !emailTo || !emailFrom) {
-    return res.status(422).send({ error: 'All fields are required.' });
+    return res
+      .status(422)
+      .send({ error: 'All fields are required except expiry.' });
   }
   try {
     const file = await File.findOne({ uuid: uuid });
@@ -48,7 +49,6 @@ router.post('/send', async (req, res) => {
     file.sender = emailFrom;
     file.receiver = emailTo;
     const response = await file.save();
-
     const sendMail = require('../services/mailService');
     sendMail({
       from: emailFrom,
@@ -56,14 +56,21 @@ router.post('/send', async (req, res) => {
       subject: 'inShare file sharing',
       text: `${emailFrom} shared a file with you.`,
       html: require('../services/emailTemplate')({
-        emailFrom: emailFrom,
+        emailFrom,
         downloadLink: `${process.env.APP_BASE_URL}/files/${file.uuid}?source=email`,
         size: parseInt(file.size / 1000) + ' KB',
         expires: '24 hours',
       }),
-    });
+    })
+      .then(() => {
+        return res.send({ success: true });
+      })
+      .catch((err) => {
+        return res.status(500).json({ error: 'Error in email sending.' });
+      });
   } catch (err) {
     return res.status(500).send({ error: 'Something went wrong.' });
   }
 });
+
 module.exports = router;
