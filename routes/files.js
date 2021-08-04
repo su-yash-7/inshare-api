@@ -1,11 +1,11 @@
-const router = require('express').Router();
-const multer = require('multer');
-const path = require('path');
-const File = require('../models/file');
-const { v4: uuidv4 } = require('uuid');
+const router = require("express").Router();
+const multer = require("multer");
+const path = require("path");
+const File = require("../models/file");
+const { v4: uuidv4 } = require("uuid");
 
 let storage = multer.diskStorage({
-  destination: (req, file, cb) => cb(null, 'uploads/'),
+  destination: (req, file, cb) => cb(null, "uploads/"),
   filename: (req, file, cb) => {
     const uniqueName = `${Date.now()}-${Math.round(
       Math.random() * 1e9
@@ -16,11 +16,11 @@ let storage = multer.diskStorage({
 let upload = multer({
   storage,
   limits: { fileSize: 1000000 * 100 },
-}).single('myfile');
-router.post('/', (req, res) => {
+}).single("myfile");
+router.post("/", (req, res) => {
   upload(req, res, async (err) => {
     if (!req.file) {
-      return res.json({ error: 'all files are require' });
+      return res.json({ error: "all files are require" });
     }
     if (err) {
       return res.status(500).send({ error: err.message });
